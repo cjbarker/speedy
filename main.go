@@ -57,6 +57,12 @@ func main() {
 	defer stop()
 
 	client := speedtest.New(cfg)
+
+	if err := client.Probe(ctx); err != nil {
+		fmt.Fprintf(os.Stderr, "speedy: %v\n", err)
+		os.Exit(1)
+	}
+
 	tty := !*asJSON && output.IsTTY(os.Stdout)
 
 	prog := make(chan speedtest.Progress, 16)

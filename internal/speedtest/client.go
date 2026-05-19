@@ -3,6 +3,8 @@ package speedtest
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -64,6 +66,30 @@ func New(cfg Config) *Client {
 		http: &http.Client{Transport: tr},
 		cfg:  cfg,
 	}
+}
+
+// Probe checks that the server supports the speed test API by issuing a
+// small download request. It returns a descriptive error if the server is
+// unreachable or does not expose the expected endpoints.
+func (c *Client) Probe(ctx context.Context) error {
+	url := c.cfg.BaseURL + "/__down?bytes=0"
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("server %q is not reachable: %w", c.cfg.BaseURL, err)
+	}
+	io.Copy(io.Discard, resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return fmt.Errorf("server %q does not support the speed test API (expected /__down and /__up endpoints)", c.cfg.BaseURL)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("server %q returned %s on probe", c.cfg.BaseURL, resp.Status)
+	}
+	return nil
 }
 
 // Run executes the configured phases and returns a Result. Progress updates

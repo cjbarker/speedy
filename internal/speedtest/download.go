@@ -45,7 +45,7 @@ func (c *Client) measureDownload(ctx context.Context, prog chan<- Progress) (flo
 		}
 		if resp.StatusCode != http.StatusOK {
 			io.Copy(io.Discard, resp.Body)
-			return fmt.Errorf("download: unexpected status %s", resp.Status)
+			return fmt.Errorf("download: server returned %s (endpoint /__down may not be supported)", resp.Status)
 		}
 		buf := make([]byte, 64<<10)
 		cr := &countingReader{r: resp.Body, m: m}

@@ -42,7 +42,7 @@ func (c *Client) measureUpload(ctx context.Context, prog chan<- Progress) (float
 			return nil
 		}
 		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
-			return fmt.Errorf("upload: unexpected status %s", resp.Status)
+			return fmt.Errorf("upload: server returned %s (endpoint /__up may not be supported)", resp.Status)
 		}
 		if n < maxChunk {
 			chunk.CompareAndSwap(n, n*2)

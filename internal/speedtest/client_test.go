@@ -132,6 +132,30 @@ func TestRunContextCancel(t *testing.T) {
 	}
 }
 
+func TestProbeSuccess(t *testing.T) {
+	srv := testBackend(nil, nil)
+	defer srv.Close()
+
+	c := New(Config{BaseURL: srv.URL})
+	if err := c.Probe(context.Background()); err != nil {
+		t.Fatalf("probe should succeed against test backend: %v", err)
+	}
+}
+
+func TestProbeUnsupportedServer(t *testing.T) {
+	srv := httptest.NewServer(http.NotFoundHandler())
+	defer srv.Close()
+
+	c := New(Config{BaseURL: srv.URL})
+	err := c.Probe(context.Background())
+	if err == nil {
+		t.Fatal("probe should fail against a server without /__down")
+	}
+	if !strings.Contains(err.Error(), "does not support the speed test API") {
+		t.Fatalf("unexpected error message: %v", err)
+	}
+}
+
 func TestRunResultFields(t *testing.T) {
 	srv := testBackend(nil, nil)
 	defer srv.Close()
