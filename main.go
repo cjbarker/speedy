@@ -14,7 +14,11 @@ import (
 	"github.com/cjbarker/speedy/internal/speedtest"
 )
 
-var version = "dev"
+var (
+	version = "dev"
+	commit  = "unknown"
+	date    = "unknown"
+)
 
 func main() {
 	var (
@@ -37,7 +41,7 @@ func main() {
 	flag.Parse()
 
 	if *showVer {
-		fmt.Printf("speedy %s\n", version)
+		fmt.Printf("speedy %s\ncommit: %s\nbuilt:  %s\n", version, commit, date)
 		return
 	}
 
