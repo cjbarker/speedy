@@ -6,11 +6,12 @@ import (
 	"io"
 	"net/http"
 	"sync/atomic"
+	"time"
 )
 
 const (
 	minChunk = 1 << 20   // 1 MiB
-	maxChunk = 256 << 20 // 256 MiB
+	maxChunk = 64 << 20 // 64 MiB – Cloudflare rejects requests ≥128 MiB
 )
 
 func (c *Client) measureDownload(ctx context.Context, prog chan<- Progress) (float64, error) {
@@ -29,6 +30,19 @@ func (c *Client) measureDownload(ctx context.Context, prog chan<- Progress) (flo
 			return err
 		}
 		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusForbidden {
+			io.Copy(io.Discard, resp.Body)
+			// Back off chunk size; Cloudflare rate-limits large requests.
+			if n > minChunk {
+				chunk.CompareAndSwap(n, n/2)
+			}
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(100 * time.Millisecond):
+			}
+			return nil
+		}
 		if resp.StatusCode != http.StatusOK {
 			io.Copy(io.Discard, resp.Body)
 			return fmt.Errorf("download: unexpected status %s", resp.Status)

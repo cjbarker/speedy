@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"sync/atomic"
+	"time"
 )
 
 func (c *Client) measureUpload(ctx context.Context, prog chan<- Progress) (float64, error) {
@@ -29,6 +30,17 @@ func (c *Client) measureUpload(ctx context.Context, prog chan<- Progress) (float
 		}
 		defer resp.Body.Close()
 		io.Copy(io.Discard, resp.Body)
+		if resp.StatusCode == http.StatusForbidden {
+			if n > minChunk {
+				chunk.CompareAndSwap(n, n/2)
+			}
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(100 * time.Millisecond):
+			}
+			return nil
+		}
 		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 			return fmt.Errorf("upload: unexpected status %s", resp.Status)
 		}
