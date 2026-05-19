@@ -5,16 +5,61 @@ bandwidth (download and upload) against Cloudflare's public speed test
 backend, with optional latency and jitter. Zero external dependencies — pure
 Go standard library.
 
-## Install
+## Quick start
 
 ```sh
-go install github.com/cjbarker/speedy@latest
+go install github.com/cjbarker/speedy@latest   # install
+speedy                                          # run a download + upload test
 ```
 
-Or build locally:
+## Build
+
+Requires Go 1.24+.
 
 ```sh
-make build      # produces ./speedy
+git clone https://github.com/cjbarker/speedy.git
+cd speedy
+make build        # produces ./speedy (trimmed, version-stamped)
+./speedy -version
+```
+
+Cross-compile for another platform with the standard Go toolchain:
+
+```sh
+GOOS=linux   GOARCH=amd64 make build
+GOOS=darwin  GOARCH=arm64 make build
+GOOS=windows GOARCH=amd64 make build
+```
+
+## Test
+
+```sh
+make test   # go test ./... -race -cover  (unit + httptest integration)
+make vet    # go vet ./...
+make fmt    # gofmt -l -w .
+```
+
+The suite uses in-process `httptest` backends, so it needs no network
+access and is safe to run in CI and sandboxed environments.
+
+## Deploy
+
+`speedy` is a single static binary with zero runtime dependencies — deploy
+by copying it onto the target host:
+
+```sh
+make build
+install -m 0755 speedy /usr/local/bin/speedy   # local/host install
+
+# or install directly from source onto a server
+go install github.com/cjbarker/speedy@latest    # -> $GOBIN/speedy
+```
+
+For scheduled monitoring, run it from cron/systemd with `-json` and append
+the output to a log or pipe it to your metrics pipeline:
+
+```sh
+*/15 * * * * /usr/local/bin/speedy -json >> /var/log/speedy.jsonl 2>&1
 ```
 
 ## Usage
@@ -53,11 +98,3 @@ speedy -no-upload               # download only
 - A warmup window is excluded from the result to discard TCP slow-start.
 - Latency is measured as time-to-first-byte on tiny requests; jitter is the
   standard deviation of those samples.
-
-## Development
-
-```sh
-make test   # go test ./... -race -cover
-make vet
-make fmt
-```
