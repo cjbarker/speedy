@@ -62,6 +62,11 @@ func main() {
 
 	client := speedtest.New(cfg)
 
+	if err := client.CheckConnectivity(ctx); err != nil {
+		fmt.Fprintf(os.Stderr, "speedy: %v\n", err)
+		os.Exit(1)
+	}
+
 	if err := client.Probe(ctx); err != nil {
 		fmt.Fprintf(os.Stderr, "speedy: %v\n", err)
 		os.Exit(1)

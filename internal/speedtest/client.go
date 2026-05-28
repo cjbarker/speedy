@@ -5,7 +5,9 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -66,6 +68,24 @@ func New(cfg Config) *Client {
 		http: &http.Client{Transport: tr},
 		cfg:  cfg,
 	}
+}
+
+// CheckConnectivity performs a fast DNS lookup on the target server's hostname
+// to verify basic internet connectivity before starting the speed test.
+func (c *Client) CheckConnectivity(ctx context.Context) error {
+	u, err := url.Parse(c.cfg.BaseURL)
+	if err != nil {
+		return fmt.Errorf("invalid server URL: %w", err)
+	}
+	host := u.Hostname()
+
+	checkCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	if _, err := net.DefaultResolver.LookupHost(checkCtx, host); err != nil {
+		return fmt.Errorf("no internet connection: unable to resolve %q (check your network)", host)
+	}
+	return nil
 }
 
 // Probe checks that the server supports the speed test API by issuing a

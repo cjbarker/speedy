@@ -156,6 +156,36 @@ func TestProbeUnsupportedServer(t *testing.T) {
 	}
 }
 
+func TestCheckConnectivitySuccess(t *testing.T) {
+	srv := testBackend(nil, nil)
+	defer srv.Close()
+
+	c := New(Config{BaseURL: srv.URL})
+	if err := c.CheckConnectivity(context.Background()); err != nil {
+		t.Fatalf("connectivity check should succeed against test backend: %v", err)
+	}
+}
+
+func TestCheckConnectivityBadHost(t *testing.T) {
+	c := New(Config{BaseURL: "http://this-host-does-not-exist.invalid"})
+	err := c.CheckConnectivity(context.Background())
+	if err == nil {
+		t.Fatal("connectivity check should fail for unresolvable host")
+	}
+	if !strings.Contains(err.Error(), "no internet connection") {
+		t.Fatalf("unexpected error message: %v", err)
+	}
+}
+
+func TestCheckConnectivityCancelled(t *testing.T) {
+	c := New(Config{BaseURL: "http://example.com"})
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := c.CheckConnectivity(ctx); err == nil {
+		t.Fatal("connectivity check should fail with cancelled context")
+	}
+}
+
 func TestRunResultFields(t *testing.T) {
 	srv := testBackend(nil, nil)
 	defer srv.Close()
